@@ -5,7 +5,7 @@
     "start": "node src/main.ts",
     "dev": "node --watch src/main.ts",
     "test:jsonStore": "node --test tests/jsonStore/**/*.test.ts",
-    "test:e2e": "node --test tests/e2e/**/*.test.ts",
+    "test:integration": "node --test tests/integration/**/*.test.ts",
     "test:docker": "bash ./test-docker.sh",
     "test:playwright": "npx playwright test"
   },

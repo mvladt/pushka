@@ -17,7 +17,7 @@
 npm run start           # production-сервер
 npm run dev             # dev-сервер с watch-режимом
 npm run test:jsonStore  # unit-тесты JSON-хранилища
-npm run test:e2e        # end-to-end тесты
+npm run test:integration # интеграционные тесты
 ```
 
 ## Архитектура
