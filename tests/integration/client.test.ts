@@ -1,11 +1,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestApp, cleanupTestFile } from "../tools.ts";
+import { createTestApp } from "../tools.ts";
 
 describe("Клиент, статические файлы", () => {
   it("GET / отдаёт HTML страницу", async () => {
-    const { app, testFile } = createTestApp();
+    const { app } = createTestApp();
     await app.start();
 
     const port = app.getPort();
@@ -20,11 +20,10 @@ describe("Клиент, статические файлы", () => {
     assert.match(body, /Web Push/);
 
     await app.stop();
-    await cleanupTestFile(testFile);
   });
 
   it("GET /sw.js отдаёт JavaScript файл", async () => {
-    const { app, testFile } = createTestApp();
+    const { app } = createTestApp();
     await app.start();
 
     const port = app.getPort();
@@ -39,6 +38,5 @@ describe("Клиент, статические файлы", () => {
     assert.match(body, /push/i);
 
     await app.stop();
-    await cleanupTestFile(testFile);
   });
 });

@@ -33,18 +33,22 @@
 
 ### Проверка
 
-Локально прогнаны (зелёные): `tsc`, `test:env` (2), `test:jsonStore` (9),
-`test:sqliteStore` (8), `test:integration` (5), `npm audit` (0 vuln).
+Локально прогнаны (зелёные): `tsc`, `test:env` (2), `test:sqliteStore` (8),
+`test:integration` (5), `npm audit` (0 vuln).
 Job `e2e` локально не гонялся (нужен headed Chrome + реальный FCM) — проверяется на самом CI.
 
-### Техдолг (выявлено при внедрении)
+### Техдолг (выявлен и закрыт при внедрении)
 
-`createTestApp()` (tests/tools.ts) собирает приложение на `createJsonStore`, тогда как прод
-работает на `createSqliteStore`. Из-за этого integration/e2e проверяют не тот сторадж, что в
-проде, а `jsonStore` остаётся в кодовой базе ради тестовой инфраструктуры. По решению — пока
-не трогаем (вариант A): `test:jsonStore` просто убран из CI. Чистый путь на будущее —
-перевести `createTestApp` на `createSqliteStore(":memory:")` и удалить `src/jsonStore`,
-`tests/jsonStore`, скрипт `test:jsonStore`.
+Обнаружено: `createTestApp()` (tests/tools.ts) собирал приложение на `createJsonStore`, тогда
+как прод работает на `createSqliteStore`. Корень — миграция на SQLite (коммит `32ae0e0`)
+переключила прод и добавила sqlite-тесты, но `tests/tools.ts` не тронула: тестовую инфру
+просто забыли домигрировать.
+
+Исправлено: `createTestApp` переведён на `createSqliteStore(":memory:")` (изолированная
+in-memory БД на каждый тест, без файлов и cleanup). Удалена связка `testFile`/`cleanupTestFile`
+из tools.ts и трёх тестов. Осиротевший `jsonStore` удалён целиком: `src/jsonStore`,
+`tests/jsonStore`, скрипт `test:jsonStore`. Теперь integration/e2e проверяют тот же сторадж,
+что и прод.
 
 ### Первый прогон CI — поймал реальный баг
 

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import type { BrowserContext, Page } from "@playwright/test";
 
-import { createTestApp, cleanupTestFile } from "../tools.ts";
+import { createTestApp } from "../tools.ts";
 
 const test = base.extend<{ context: BrowserContext; page: Page }>({
   context: async ({ headless, channel, launchOptions, permissions }, use) => {
@@ -28,13 +28,11 @@ const test = base.extend<{ context: BrowserContext; page: Page }>({
 });
 
 let app: ReturnType<typeof createTestApp>["app"];
-let testFile: string;
 let port: number;
 
 test.beforeAll(async () => {
   const testApp = createTestApp();
   app = testApp.app;
-  testFile = testApp.testFile;
 
   await app.start();
   port = app.getPort();
@@ -42,7 +40,6 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   await app.stop();
-  await cleanupTestFile(testFile);
 });
 
 test("Полный цикл push-уведомления: подписка → планирование → получение", async ({

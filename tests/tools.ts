@@ -1,4 +1,3 @@
-import { access, rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
 import webpush from "web-push";
@@ -6,7 +5,7 @@ import webpush from "web-push";
 import { createApp } from "../src/app.ts";
 import { createRouter } from "../src/router/router.ts";
 import { createNotificationScheduler } from "../src/scheduler/scheduler.ts";
-import { createJsonStore } from "../src/jsonStore/store.ts";
+import { createSqliteStore } from "../src/sqliteStore/store.ts";
 import { createWebPusher } from "../src/pusher/pusher.ts";
 
 import type { NotificationEntity } from "../src/types.ts";
@@ -43,19 +42,7 @@ export const createTestNotification = (
 export const dumbUUID = (): string =>
   `id-${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
 
-export const cleanupTestFile = async (filePath: string): Promise<void> => {
-  try {
-    await access(filePath);
-    await rm(filePath);
-  } catch (error: any) {
-    if (error.code !== "ENOENT") {
-      throw error; // Кидаем только если не "file not found"
-    }
-  }
-};
-
 export const createTestApp = () => {
-  const testFile = `test-notifications-${dumbUUID()}.json`;
   const vapidKeys = webpush.generateVAPIDKeys();
 
   const testLogger: Logger = {
@@ -63,7 +50,8 @@ export const createTestApp = () => {
     error: () => {},
   };
 
-  const store = createJsonStore(testFile);
+  // In-memory БД: изолирована на каждый тест, не оставляет файлов.
+  const store = createSqliteStore(":memory:");
   const pusher = createWebPusher(
     {
       vapidDetails: {
@@ -82,5 +70,5 @@ export const createTestApp = () => {
   const pathToClient = fileURLToPath(new URL("../src/client", import.meta.url));
   const app = createApp(0, router, scheduler, testLogger, pathToClient);
 
-  return { app, testFile, vapidKeys };
+  return { app, vapidKeys };
 };

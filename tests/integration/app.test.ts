@@ -1,17 +1,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  createTestApp,
-  cleanupTestFile,
-  createTestNotification,
-} from "../tools.ts";
+import { createTestApp, createTestNotification } from "../tools.ts";
 
 describe("Приложенька, App", () => {
   describe("Запрос GET VAPID ключ", () => {
     it("Отрабатывает норм", async () => {
       // Arrange
-      const { app, testFile, vapidKeys } = createTestApp();
+      const { app, vapidKeys } = createTestApp();
 
       // Act
       await app.start();
@@ -28,14 +24,13 @@ describe("Приложенька, App", () => {
 
       // Clean
       await app.stop();
-      await cleanupTestFile(testFile);
     });
   });
 
   describe("Запрос POST уведомление", () => {
     it("Создает уведомление с валидными данными", async () => {
       // Arrange
-      const { app, testFile } = createTestApp();
+      const { app } = createTestApp();
       const notification = createTestNotification();
 
       // Act
@@ -57,12 +52,11 @@ describe("Приложенька, App", () => {
 
       // Clean
       await app.stop();
-      await cleanupTestFile(testFile);
     });
 
     it("Возвращает 400 при пустом теле", async () => {
       // Arrange
-      const { app, testFile } = createTestApp();
+      const { app } = createTestApp();
 
       // Act
       await app.start();
@@ -83,7 +77,6 @@ describe("Приложенька, App", () => {
 
       // Clean
       await app.stop();
-      await cleanupTestFile(testFile);
     });
   });
 });

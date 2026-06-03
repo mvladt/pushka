@@ -14,10 +14,12 @@
 ## Команды
 
 ```bash
-npm run start           # production-сервер
-npm run dev             # dev-сервер с watch-режимом
-npm run test:jsonStore  # unit-тесты JSON-хранилища
+npm run start            # production-сервер
+npm run dev              # dev-сервер с watch-режимом
+npm run test:env         # unit-тесты загрузки .env
+npm run test:sqliteStore # unit-тесты SQLite-хранилища
 npm run test:integration # интеграционные тесты
+npm run test:playwright  # e2e-тесты (Playwright)
 ```
 
 ## Архитектура
