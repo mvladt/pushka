@@ -1,4 +1,3 @@
-- Вкорячить норм СУБД (mongo/postgre/sqlite).
 - Рефакторинг sheduler-a.
 - Написать про Docker в README.
 - Подумать над тем, чтобы вынести сущьность repeater.

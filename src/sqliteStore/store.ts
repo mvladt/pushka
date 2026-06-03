@@ -1,0 +1,84 @@
+import Database from "better-sqlite3";
+
+import { validateDatetime } from "../validateDatetime.ts";
+import type { NotificationEntity, NotificationStore } from "../types.ts";
+
+const WINDOW_MS = 2 * 60 * 1000; // Окно выборки: от "сейчас" до "сейчас + 2 минуты".
+
+type Row = {
+  id: string;
+  payload: string; // JSON
+  datetime: string; // Канонический UTC-ISO.
+  subscription: string; // JSON
+};
+
+export const createSqliteStore = (
+  filename: string = "notifications.db"
+): NotificationStore => {
+  const db = new Database(filename);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id TEXT PRIMARY KEY,
+      payload TEXT NOT NULL,
+      datetime TEXT NOT NULL,
+      subscription TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_notifications_datetime
+      ON notifications(datetime);
+  `);
+
+  const insertOne = db.prepare(
+    `INSERT OR REPLACE INTO notifications (id, payload, datetime, subscription)
+     VALUES (@id, @payload, @datetime, @subscription)`
+  );
+  const deleteOne = db.prepare(`DELETE FROM notifications WHERE id = ?`);
+  const selectOne = db.prepare(`SELECT * FROM notifications WHERE id = ?`);
+  const selectForNow = db.prepare(
+    `SELECT * FROM notifications WHERE datetime >= ? AND datetime <= ?`
+  );
+
+  const deleteMany = db.transaction((ids: string[]) => {
+    for (const id of ids) deleteOne.run(id);
+  });
+
+  const rowToEntity = (row: Row): NotificationEntity => ({
+    id: row.id,
+    payload: JSON.parse(row.payload),
+    datetime: row.datetime,
+    subscription: JSON.parse(row.subscription),
+  });
+
+  const store: NotificationStore = {
+    async saveOne(notification) {
+      validateDatetime(notification.datetime);
+      insertOne.run({
+        id: notification.id,
+        payload: JSON.stringify(notification.payload),
+        // Нормализуем в канонический UTC-ISO, чтобы лексикографическое
+        // сравнение в SQL совпадало с хронологическим.
+        datetime: new Date(notification.datetime).toISOString(),
+        subscription: JSON.stringify(notification.subscription),
+      });
+    },
+    async removeOne(notification) {
+      deleteOne.run(notification.id);
+    },
+    async removeMany(notifications) {
+      deleteMany(notifications.map((n) => n.id));
+    },
+    async getOneById(notificationId) {
+      const row = selectOne.get(notificationId) as Row | undefined;
+      return row ? rowToEntity(row) : (undefined as unknown as NotificationEntity);
+    },
+    async getAllForNow() {
+      const now = Date.now();
+      const from = new Date(now).toISOString();
+      const to = new Date(now + WINDOW_MS).toISOString();
+      const rows = selectForNow.all(from, to) as Row[];
+      return rows.map(rowToEntity);
+    },
+  };
+
+  return store;
+};

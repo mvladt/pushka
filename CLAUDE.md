@@ -28,7 +28,7 @@ main.ts → createApp(port, router, scheduler, logger)
             │     ├── createNotificationRouter
             │     └── createVapidKeyRouter
             ├── createNotificationScheduler(store, pusher, logger)
-            ├── createJsonStore(filename)
+            ├── createSqliteStore(filename)
             ├── createWebPusher(vapidConfig, logger)
             └── createConsoleLogger()
 ```

@@ -4,6 +4,10 @@ data.json
 testData*.json
 experiment*.ts
 notifications.json
+notifications.db
+notifications.db-journal
+notifications.db-wal
+notifications.db-shm
 .cline*
 test-results
 .aider*

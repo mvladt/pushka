@@ -5,6 +5,7 @@
 - [Возможности](#возможности)
 - [Установка и запуск](#установка-и-запуск)
 - [Описание API](#описание-api)
+- [Хранилище](#хранилище)
 - [Архитектура](#архитектура)
 
 [Простой клиент](https://github.com/mvladt/webpush-dumb-client)
@@ -58,6 +59,20 @@ curl -X POST 'https://scheduler.push.mvladt.ru/api/notifications' \
       }
     }
   }'
+```
+
+## Хранилище
+
+Уведомления хранятся в SQLite — файл `notifications.db` в корне проекта (создаётся автоматически при первом запуске, в git не попадает).
+
+- `payload` и `subscription` хранятся как JSON-строки.
+- `datetime` нормализуется в канонический UTC-ISO (`new Date(...).toISOString()`), по нему построен индекс `idx_notifications_datetime` для быстрой выборки уведомлений «к отправке».
+- Миграция старых данных из `notifications.json` автоматически не выполняется — при переходе на SQLite база стартует пустой, а старый JSON-файл остаётся нетронутым.
+
+Посмотреть содержимое базы:
+
+```sh
+sqlite3 notifications.db 'SELECT id, datetime FROM notifications;'
 ```
 
 ## Архитектура

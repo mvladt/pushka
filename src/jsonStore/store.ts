@@ -1,4 +1,5 @@
 import jsonStoreTools from "./tools.ts";
+import { validateDatetime } from "../validateDatetime.ts";
 import type { NotificationEntity, NotificationStore } from "../types.ts";
 
 // TODO: Написать тесты на 'getOneById'.
@@ -8,16 +9,7 @@ export const createJsonStore = (
 ): NotificationStore => {
   const store: NotificationStore = {
     async saveOne(notification) {
-      // Валидация
-      // TODO: Вынести в отдельный модуль.
-      if (!notification.datetime) {
-        throw new Error("Параметр 'datetime' — обязательный.");
-      }
-      if (String(new Date(notification.datetime)) === "Invalid Date") {
-        throw new Error(
-          "Параметр 'datetime' — значение некорректно. Должно быть в формате `YYYY-MM-DDTHH:mm:ss.sssZ`."
-        );
-      }
+      validateDatetime(notification.datetime);
 
       const oldArray = await jsonStoreTools.readStoreFile(file);
       const newArray = [...oldArray, notification];

@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { loadEnv } from "./env.ts";
 import { createRouter } from "./router/router.ts";
 import { createNotificationScheduler } from "./scheduler/scheduler.ts";
-import { createJsonStore } from "./jsonStore/store.ts";
+import { createSqliteStore } from "./sqliteStore/store.ts";
 import { createWebPusher } from "./pusher/pusher.ts";
 import { createApp } from "./app.ts";
 import { createConsoleLogger } from "./logger/logger.ts";
@@ -12,7 +12,7 @@ const { port, vapidSubject, vapidPublicKey, vapidPrivateKey } = await loadEnv();
 
 const logger = createConsoleLogger();
 
-const store = createJsonStore("notifications.json");
+const store = createSqliteStore("notifications.db");
 
 const pusher = createWebPusher(
   {
