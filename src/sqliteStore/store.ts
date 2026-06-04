@@ -3,8 +3,6 @@ import Database from "better-sqlite3";
 import { validateDatetime } from "../validateDatetime.ts";
 import type { NotificationEntity, NotificationStore } from "../types.ts";
 
-const WINDOW_MS = 2 * 60 * 1000; // Окно выборки: от "сейчас" до "сейчас + 2 минуты".
-
 type Row = {
   id: string;
   payload: string; // JSON
@@ -34,8 +32,8 @@ export const createSqliteStore = (
   );
   const deleteOne = db.prepare(`DELETE FROM notifications WHERE id = ?`);
   const selectOne = db.prepare(`SELECT * FROM notifications WHERE id = ?`);
-  const selectForNow = db.prepare(
-    `SELECT * FROM notifications WHERE datetime >= ? AND datetime <= ?`
+  const selectDue = db.prepare(
+    `SELECT * FROM notifications WHERE datetime <= ?`
   );
 
   const deleteMany = db.transaction((ids: string[]) => {
@@ -72,10 +70,10 @@ export const createSqliteStore = (
       return row ? rowToEntity(row) : (undefined as unknown as NotificationEntity);
     },
     async getAllForNow() {
-      const now = Date.now();
-      const from = new Date(now).toISOString();
-      const to = new Date(now + WINDOW_MS).toISOString();
-      const rows = selectForNow.all(from, to) as Row[];
+      // Все уведомления, чьё время уже наступило (datetime <= now).
+      // Решение об отправке/отбрасывании просроченных принимает планировщик.
+      const now = new Date().toISOString();
+      const rows = selectDue.all(now) as Row[];
       return rows.map(rowToEntity);
     },
   };

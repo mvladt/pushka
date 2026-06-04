@@ -98,34 +98,50 @@ describe("sqliteStore", () => {
   });
 
   describe("getAllForNow", () => {
-    it('Выдает уведомление с датой "сейчас плюс 1 мин."', async () => {
+    it("Выдает уведомление, чьё время уже наступило.", async () => {
       // Arrange
       const store = createSqliteStore(":memory:");
-      const oneMinuteForward = new Date(Date.now() + 1000 * 60).toISOString();
-      const notification = createFakeNotification();
-      const notificationForNow = createFakeNotification(oneMinuteForward);
-      await store.saveOne(notification);
-      await store.saveOne(notificationForNow);
+      const past = new Date(Date.now() - 1000 * 60).toISOString(); // -1 мин
+      const future = new Date(Date.now() + 1000 * 60).toISOString(); // +1 мин
+      const due = createFakeNotification(past);
+      const notDue = createFakeNotification(future);
+      await store.saveOne(due);
+      await store.saveOne(notDue);
 
       // Act
-      const notificationsForNow = await store.getAllForNow();
+      const result = await store.getAllForNow();
 
       // Assert
-      assert.equal(notificationsForNow.length, 1);
-      assert.equal(notificationsForNow[0].id, notificationForNow.id);
+      assert.equal(result.length, 1);
+      assert.equal(result[0].id, due.id);
     });
 
-    it("Не выдает уведомление из далёкого будущего.", async () => {
+    it("Не выдает уведомление из будущего.", async () => {
       // Arrange
       const store = createSqliteStore(":memory:");
-      const farFuture = new Date(Date.now() + 1000 * 60 * 60).toISOString(); // +1 час
-      await store.saveOne(createFakeNotification(farFuture));
+      const future = new Date(Date.now() + 1000 * 60 * 60).toISOString(); // +1 час
+      await store.saveOne(createFakeNotification(future));
 
       // Act
-      const notificationsForNow = await store.getAllForNow();
+      const result = await store.getAllForNow();
 
       // Assert
-      assert.equal(notificationsForNow.length, 0);
+      assert.equal(result.length, 0);
+    });
+
+    it("Выдает уже просроченное уведомление (отбраковка — на стороне планировщика).", async () => {
+      // Arrange
+      const store = createSqliteStore(":memory:");
+      const longAgo = new Date(Date.now() - 1000 * 60 * 60).toISOString(); // -1 час
+      const expired = createFakeNotification(longAgo);
+      await store.saveOne(expired);
+
+      // Act
+      const result = await store.getAllForNow();
+
+      // Assert
+      assert.equal(result.length, 1);
+      assert.equal(result[0].id, expired.id);
     });
   });
 });
