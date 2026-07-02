@@ -82,7 +82,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/root/projects/webpush-scheduler
-ExecStart=/root/.nvm/versions/node/v22.20.0/bin/node src/main.ts
+ExecStart=/usr/local/bin/node-webpush src/main.ts
 Restart=on-failure
 RestartSec=3
 Environment=NODE_ENV=production
@@ -93,7 +93,11 @@ WantedBy=multi-user.target
 
 - [ ] Не передавать `--env-file .env` — текущий код подгружает `.env` через `loadEnv()`.
 - [ ] `WorkingDirectory` — `/root/projects/webpush-scheduler`, чтобы `.env` и `notifications.json` лежали рядом.
-- [ ] Подумать о Node-версии: жёстко прописать путь через nvm — хрупко при обновлении Node. Альтернатива: `ExecStart=/usr/bin/env -S bash -lc "node src/main.ts"` (загружает nvm через bash login). Решим на месте.
+- [ ] Node-версия: symlink на системный путь, а не жёсткий nvm-путь и не bash-loader.
+  ```sh
+  ln -s "$(nvm which 22)" /usr/local/bin/node-webpush
+  ```
+  Обновление версии Node — `ln -sf` заново. Дешевле, чем bash login-shell в `ExecStart`, и не ломается молча при `nvm install`, как жёсткий путь.
 
 ### 2.3. Активация
 
@@ -117,12 +121,12 @@ WantedBy=multi-user.target
   ```sh
   ssh-keygen -t ed25519 -C "github-actions-webpush-scheduler" -f ~/.ssh/gha_webpush -N ""
   ```
-- [ ] Положить публичный ключ в `/root/.ssh/authorized_keys` на SPB. Для усиления — добавить ограничения:
+- [ ] Положить публичный ключ в `/root/.ssh/authorized_keys` на SPB с ограничением команды (решено — включаем сразу):
   ```
   command="/root/projects/webpush-scheduler/scripts/deploy.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding ssh-ed25519 AAAA... github-actions-webpush-scheduler
   ```
-  *(командное ограничение — опционально; если не делаем, ключ имеет полный shell-доступ под root, как и личный.)*
-- [ ] Если делаем `command="..."`, то в репозитории нужен `scripts/deploy.sh` (см. ниже).
+  Ключ CI сможет запустить только `deploy.sh`, а не произвольный shell под root.
+- [ ] `scripts/deploy.sh` — обязателен (см. ниже), т.к. ключ ограничен `command="..."`.
 
 ### 3.2. Добавить `scripts/deploy.sh` (запускается на сервере)
 
@@ -152,9 +156,10 @@ WantedBy=multi-user.target
 
 ### 3.3. Создать `.github/workflows/deploy.yml`
 
-- [ ] Триггеры:
-  - `workflow_run`: после успешного `ci.yml` на ветке `main` (`branches: [main]`, `types: [completed]` + проверка `conclusion == 'success'`).
+- [ ] Триггеры (решено — вариант «push в main», без зависимости от `ci.yml`):
+  - `push` в `main`.
   - `workflow_dispatch` — на случай ручного деплоя.
+- [ ] Job `deploy` начинается с тех же проверок, что и `ci.yml` (`tsc`, `test:env`, `test:sqliteStore`, `test:integration`) — дублирование сознательное, чтобы не зависеть от хрупкого `workflow_run`.
 - [ ] Environment: `production` (см. этап 4.4).
 - [ ] Permissions: `contents: read`.
 
@@ -162,11 +167,10 @@ WantedBy=multi-user.target
 
 - [ ] Установить ssh-agent: `webfactory/ssh-agent@<sha>` с `ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}`.
 - [ ] Добавить host в known_hosts: `ssh-keyscan -H 188.225.37.62 >> ~/.ssh/known_hosts` (или хранить отпечаток в Secret и `ssh-keygen -lf`).
-- [ ] Запустить:
+- [ ] Запустить (ключ ограничен `command="..."` в `authorized_keys` — команда после `ssh` игнорируется сервером и не нужна):
   ```sh
-  ssh root@188.225.37.62 'bash /root/projects/webpush-scheduler/scripts/deploy.sh'
+  ssh root@188.225.37.62
   ```
-  *(если `command="..."` в `authorized_keys` — достаточно `ssh root@188.225.37.62`.)*
 - [ ] Внешний smoke после деплоя:
   ```sh
   curl --fail --retry 5 --retry-delay 2 https://scheduler.push.mvladt.ru/api/health
@@ -180,7 +184,9 @@ WantedBy=multi-user.target
 
 ### 3.6. Откат
 
-- [ ] Документировать в `README.md` (или отдельным `docs/deploy.md`):
+Решено (E) — без автоотката: при падении health-check в `deploy.sh` — красный билд, разбор руками.
+
+- [ ] Документировать в `README.md` (или отдельным `docs/deploy.md`) ручную процедуру:
   ```sh
   ssh root@188.225.37.62
   cd /root/projects/webpush-scheduler
@@ -188,7 +194,7 @@ WantedBy=multi-user.target
   npm ci --omit=dev
   systemctl restart webpush-scheduler
   ```
-- [ ] Workflow `rollback.yml` с `workflow_dispatch` и параметром `sha` — опционально, в будущем.
+- [ ] `rollback.yml`/автооткат на `LAST_GOOD_SHA` — не делаем сейчас. Пересмотреть, если ручной разбор при падении деплоя станет болезненным на практике.
 
 ---
 
@@ -315,19 +321,14 @@ WantedBy=multi-user.target
 6. ~~Playwright в CI?~~ → да, всегда.
 7. ~~ESLint/Prettier?~~ → отложено, см. `eslint-prettier.task.md`.
 
-**Новые открытые вопросы — нужен ответ перед началом:**
+**Ответы на открытые вопросы A–E:**
 
-A. **SSH-пользователь для деплоя.** Сейчас на SPB всё под `root`. Деплоить тоже под `root` — быстрее всего, но «грязно». Альтернатива — завести `deploy`-пользователя в группе с правами `systemctl restart webpush-scheduler` через sudoers. Делаем «грязно» или «правильно»?
+A. ~~SSH-пользователь для деплоя?~~ → **root** (как есть сейчас).
 
-B. **Ограничение SSH-ключа CI через `command="..."`** в `authorized_keys`. Сильно усложняет ключ (он сможет только запустить `deploy.sh`), но значительно безопаснее. Включаем сразу или потом?
+B. ~~Ограничение SSH-ключа CI через `command="..."`?~~ → **включаем сразу**.
 
-C. **Node-версия в systemd-юните.** Жёстко прописать путь к бинарю nvm (`/root/.nvm/versions/node/v22.20.0/bin/node`) — хрупко при апгрейде Node. Или завернуть в bash-loader, чтобы nvm активировался. Что предпочитаешь?
+C. ~~Node-версия в systemd-юните?~~ → **symlink на системный путь**: `ln -s $(nvm which 22) /usr/local/bin/node-webpush`, `ExecStart=/usr/local/bin/node-webpush src/main.ts`. Компромисс между жёстким путём (ломается при апгрейде Node) и bash-loader (тянет side-эффекты login-shell). Обновление версии — одна команда `ln -sf`.
 
-D. **Триггер деплоя.**
-   - Вариант 1: `workflow_run` после успешного CI на `main` — деплой запускается автоматически после каждого зелёного коммита в main.
-   - Вариант 2: на push tag `v*.*.*` — деплоятся только явные релизы.
-   - Вариант 3: на push в `main` напрямую (без зависимости от CI workflow) с дублированием тестов в начале deploy-workflow — проще, надёжнее.
+D. ~~Триггер деплоя?~~ → **вариант 3**: push в `main` напрямую, с дублированием тестов в начале `deploy.yml`. Для соло-проекта с частыми мелкими правками тегирование — лишнее трение, а `workflow_run` — источник трудноуловимых багов ради экономии пары минут CI.
 
-   По умолчанию заложил **вариант 1**, но он самый хрупкий из трёх (`workflow_run` иногда странно себя ведёт). Что выбираешь?
-
-E. **Падение деплоя — что делать?** Сейчас при `health-check timeout` сервис останется в сломанном состоянии (старый код уже сброшен). Делаем автооткат на предыдущий SHA (хранить в файле `LAST_GOOD_SHA`) или просто красный билд + ручной разбор?
+E. ~~Падение деплоя — что делать?~~ → **красный билд + ручной разбор**, без автоотката. Для одиночного проекта без SLA автооткат — лишняя сложность, которая может маскировать проблему (в т.ч. зациклиться, если откат тоже не проходит health-check). Пересмотреть, если даунтайм станет болезненным на практике.
