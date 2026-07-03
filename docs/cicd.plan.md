@@ -27,7 +27,7 @@
 ### 1.2. Job `test` — шаги
 
 - [x] `actions/checkout@v4` _(пока по тегу, не SHA — pin-by-SHA отложен до этапа 4 вместе с Dependabot)_
-- [x] `actions/setup-node@v4` с `node-version: "22"` + `cache: npm` _(взял мажор `22` вместо `22.18` — совпадает с сервером v22.20 и engines `>= 22.18`)_
+- [x] `actions/setup-node@v4` с `node-version: "24"` + `cache: npm` _(изначально был мажор `22`, совпадал с сервером v22.20; после перехода на `node:sqlite` и отказа от `better-sqlite3` — обновлено до `24`, `engines` теперь `>= 24.0.0`)_
 - [x] `npm ci`
 - [x] **Typecheck:** `npx tsc` (использует существующий `tsconfig.json` с `noEmit: true`)
 - [x] **Unit-тесты env:** `npm run test:env`
@@ -66,6 +66,9 @@
 ### 2.1. Подготовка (одноразово, руками на сервере)
 
 - [ ] Залогиниться на SPB, найти и убить старый nohup-процесс (`kill 3387331` или эквивалент).
+- [ ] На сервере пока только `nvm` + Node v22.20 (см. `cicd.task.md`). После перехода проекта на
+      `node:sqlite` нужен Node ≥ 24: `nvm install 24`, проверить итоговый путь бинаря
+      (`nvm which 24`) — он пойдёт в `ExecStart` юнита (2.2).
 - [ ] Проверить, что `/root/projects/webpush-scheduler/` чистый, синхронизирован с `origin/main`.
 - [ ] Прогнать `npm ci --omit=dev`.
 
@@ -82,7 +85,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/root/projects/webpush-scheduler
-ExecStart=/root/.nvm/versions/node/v22.20.0/bin/node src/main.ts
+ExecStart=/root/.nvm/versions/node/v24.18.0/bin/node src/main.ts
 Restart=on-failure
 RestartSec=3
 Environment=NODE_ENV=production
@@ -351,7 +354,7 @@ A. ~~SSH-пользователь для деплоя?~~ → **root** (как е
 
 B. ~~Ограничение SSH-ключа CI через `command="..."`?~~ → **включаем сразу**.
 
-C. ~~Node-версия в systemd-юните?~~ → **жёсткий путь к бинарю nvm** (`/root/.nvm/versions/node/v22.20.0/bin/node`). Пользователь предпочёл явность; при апгрейде Node путь в юните надо будет обновить руками.
+C. ~~Node-версия в systemd-юните?~~ → **жёсткий путь к бинарю nvm** (`/root/.nvm/versions/node/v24.18.0/bin/node`, версия обновлена после перехода на Node 24). Пользователь предпочёл явность; при апгрейде Node путь в юните надо будет обновить руками.
 
 D. ~~Триггер деплоя?~~ → **job `deploy` внутри `ci.yml`**, а не отдельный `deploy.yml`: `needs: [test, e2e]` + `if: github.ref == 'refs/heads/main'`. Тесты гоняются один раз (обычная зависимость job'ов, не хрупкий `workflow_run` между разными workflow), деплой стартует только после их успеха.
 
