@@ -82,7 +82,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=/root/projects/webpush-scheduler
-ExecStart=/usr/local/bin/node-webpush src/main.ts
+ExecStart=/root/.nvm/versions/node/v22.20.0/bin/node src/main.ts
 Restart=on-failure
 RestartSec=3
 Environment=NODE_ENV=production
@@ -93,11 +93,7 @@ WantedBy=multi-user.target
 
 - [ ] Не передавать `--env-file .env` — текущий код подгружает `.env` через `loadEnv()`.
 - [ ] `WorkingDirectory` — `/root/projects/webpush-scheduler`, чтобы `.env` и `notifications.json` лежали рядом.
-- [ ] Node-версия: symlink на системный путь, а не жёсткий nvm-путь и не bash-loader.
-  ```sh
-  ln -s "$(nvm which 22)" /usr/local/bin/node-webpush
-  ```
-  Обновление версии Node — `ln -sf` заново. Дешевле, чем bash login-shell в `ExecStart`, и не ломается молча при `nvm install`, как жёсткий путь.
+- [ ] Node-версия: жёсткий путь к бинарю nvm (решено — пользователь предпочитает явность). При апгрейде Node путь придётся обновить руками в юните и перезапустить сервис — иначе systemd молча продолжит стартовать старую версию.
 
 ### 2.3. Активация
 
@@ -135,33 +131,59 @@ WantedBy=multi-user.target
   #!/usr/bin/env bash
   set -euo pipefail
   cd /root/projects/webpush-scheduler
-  git fetch --prune origin
-  git reset --hard origin/main
   source /root/.nvm/nvm.sh
   nvm use --lts >/dev/null 2>&1 || true
+
+  wait_healthy() {
+    for i in {1..15}; do
+      if curl -fsS http://localhost:3001/api/health >/dev/null; then
+        return 0
+      fi
+      sleep 1
+    done
+    return 1
+  }
+
+  PREV=$(git rev-parse HEAD)
+  git fetch --prune origin
+  git reset --hard origin/main
   npm ci --omit=dev
   systemctl restart webpush-scheduler
-  # Подождать пока сервис поднимется
-  for i in {1..15}; do
-    if curl -fsS http://localhost:3001/api/health >/dev/null; then
-      echo "healthy"; exit 0
-    fi
-    sleep 1
-  done
-  echo "FAIL: health check timeout"
-  systemctl status webpush-scheduler --no-pager | tail -30
+
+  if wait_healthy; then
+    echo "healthy"
+    exit 0
+  fi
+
+  echo "FAIL: health check timeout, rolling back to $PREV"
+  git reset --hard "$PREV"
+  npm ci --omit=dev
+  systemctl restart webpush-scheduler
+
+  if wait_healthy; then
+    echo "rolled back to $PREV, but deploy FAILED"
+  else
+    echo "rollback ALSO failed, service is down"
+    systemctl status webpush-scheduler --no-pager | tail -30
+  fi
   exit 1
   ```
+  Автооткат — одна попытка, без цикла: если сам откат не поднимает сервис, скрипт не зацикливается,
+  а просто падает красным с диагностикой в логе. Сервис либо жив на предыдущей версии, либо разбор
+  руками неизбежен в любом случае.
 - [ ] `chmod +x scripts/deploy.sh`. Файл коммитится в репо — он становится «источником истины» для процедуры деплоя.
 
-### 3.3. Создать `.github/workflows/deploy.yml`
+### 3.3. Добавить job `deploy` в `.github/workflows/ci.yml`
 
-- [ ] Триггеры (решено — вариант «push в main», без зависимости от `ci.yml`):
-  - `push` в `main`.
-  - `workflow_dispatch` — на случай ручного деплоя.
-- [ ] Job `deploy` начинается с тех же проверок, что и `ci.yml` (`tsc`, `test:env`, `test:sqliteStore`, `test:integration`) — дублирование сознательное, чтобы не зависеть от хрупкого `workflow_run`.
+Решено (D) — не отдельный `deploy.yml`, а job **внутри `ci.yml`**: `needs: [test, e2e]`,
+`if: github.ref == 'refs/heads/main'`. Тесты гоняются один раз, деплой стартует только
+после их успеха — без дублирования и без хрупкого `workflow_run` между двумя workflow.
+
+- [ ] `needs: [test, e2e]`
+- [ ] `if: github.ref == 'refs/heads/main' && github.event_name == 'push'`
 - [ ] Environment: `production` (см. этап 4.4).
-- [ ] Permissions: `contents: read`.
+- [ ] Permissions job'а: `contents: read`.
+- [ ] `workflow_dispatch` как триггер всего `ci.yml` — на случай ручного деплоя без нового пуша.
 
 ### 3.4. Шаги job `deploy`
 
@@ -184,9 +206,13 @@ WantedBy=multi-user.target
 
 ### 3.6. Откат
 
-Решено (E) — без автоотката: при падении health-check в `deploy.sh` — красный билд, разбор руками.
+Решено (E) — автооткат в `deploy.sh` (см. 3.2): при провале health-check скрипт сам возвращается
+на предыдущий коммит (`PREV`), переустанавливает зависимости и перезапускает сервис — **одна
+попытка**, без цикла. Итог зелёный при первом успехе, иначе билд красный, но сервис жив на старой
+версии (или упал совсем, если и откат не поднялся — тогда разбор руками неизбежен).
 
-- [ ] Документировать в `README.md` (или отдельным `docs/deploy.md`) ручную процедуру:
+- [ ] Документировать в `README.md` (или отдельным `docs/deploy.md`) процедуру ручного отката
+      на случай, если автооткат тоже не помог:
   ```sh
   ssh root@188.225.37.62
   cd /root/projects/webpush-scheduler
@@ -194,7 +220,6 @@ WantedBy=multi-user.target
   npm ci --omit=dev
   systemctl restart webpush-scheduler
   ```
-- [ ] `rollback.yml`/автооткат на `LAST_GOOD_SHA` — не делаем сейчас. Пересмотреть, если ручной разбор при падении деплоя станет болезненным на практике.
 
 ---
 
@@ -255,9 +280,8 @@ WantedBy=multi-user.target
 - [ ] Бейджи в шапку:
   ```markdown
   ![CI](https://github.com/mvladt/webpush-scheduler/actions/workflows/ci.yml/badge.svg)
-  ![Deploy](https://github.com/mvladt/webpush-scheduler/actions/workflows/deploy.yml/badge.svg)
   ```
-- [ ] Раздел «Деплой» — короткое описание: push в main → CI → SSH-деплой → health-check.
+- [ ] Раздел «Деплой» — короткое описание: push в main → тесты → SSH-деплой (job `deploy` в том же `ci.yml`) → health-check (+ автооткат при провале).
 
 ### 5.2. PR template
 
@@ -280,7 +304,7 @@ WantedBy=multi-user.target
 | Действие | Файл                                       | Этап |
 | -------- | ------------------------------------------ | ---- |
 | Создать  | `.github/workflows/ci.yml`                 | 1    |
-| Создать  | `.github/workflows/deploy.yml`             | 3    |
+| Изменить | `.github/workflows/ci.yml` (добавить job `deploy`) | 3 |
 | Создать  | `.github/workflows/codeql.yml`             | 4    |
 | Создать  | `.github/dependabot.yml`                   | 4    |
 | Создать  | `.github/pull_request_template.md`         | 5    |
@@ -327,8 +351,8 @@ A. ~~SSH-пользователь для деплоя?~~ → **root** (как е
 
 B. ~~Ограничение SSH-ключа CI через `command="..."`?~~ → **включаем сразу**.
 
-C. ~~Node-версия в systemd-юните?~~ → **symlink на системный путь**: `ln -s $(nvm which 22) /usr/local/bin/node-webpush`, `ExecStart=/usr/local/bin/node-webpush src/main.ts`. Компромисс между жёстким путём (ломается при апгрейде Node) и bash-loader (тянет side-эффекты login-shell). Обновление версии — одна команда `ln -sf`.
+C. ~~Node-версия в systemd-юните?~~ → **жёсткий путь к бинарю nvm** (`/root/.nvm/versions/node/v22.20.0/bin/node`). Пользователь предпочёл явность; при апгрейде Node путь в юните надо будет обновить руками.
 
-D. ~~Триггер деплоя?~~ → **вариант 3**: push в `main` напрямую, с дублированием тестов в начале `deploy.yml`. Для соло-проекта с частыми мелкими правками тегирование — лишнее трение, а `workflow_run` — источник трудноуловимых багов ради экономии пары минут CI.
+D. ~~Триггер деплоя?~~ → **job `deploy` внутри `ci.yml`**, а не отдельный `deploy.yml`: `needs: [test, e2e]` + `if: github.ref == 'refs/heads/main'`. Тесты гоняются один раз (обычная зависимость job'ов, не хрупкий `workflow_run` между разными workflow), деплой стартует только после их успеха.
 
-E. ~~Падение деплоя — что делать?~~ → **красный билд + ручной разбор**, без автоотката. Для одиночного проекта без SLA автооткат — лишняя сложность, которая может маскировать проблему (в т.ч. зациклиться, если откат тоже не проходит health-check). Пересмотреть, если даунтайм станет болезненным на практике.
+E. ~~Падение деплоя — что делать?~~ → **автооткат в `deploy.sh`**, одна попытка без цикла: при провале health-check скрипт возвращается на предыдущий коммит, переустанавливает зависимости и перезапускает сервис. Если и откат не поднялся — красный билд с диагностикой, разбор руками.
