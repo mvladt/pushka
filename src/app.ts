@@ -28,7 +28,7 @@ export const createApp = (
   return {
     async start() {
       return new Promise<void>((resolve) => {
-        server = app.listen(port, () => {
+        server = app.listen(port, "127.0.0.1", () => {
           logger.log(`Server started on port ${port}.`);
           notificationScheduler.run();
           logger.log(`App started.`);
