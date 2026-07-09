@@ -1,5 +1,5 @@
 {
-  "name": "webpush-scheduler",
+  "name": "pushka",
   "type": "module",
   "scripts": {
     "start": "node src/main.ts",

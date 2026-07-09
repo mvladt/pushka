@@ -1,7 +1,7 @@
-# Планировщик Web Push уведомлений
+# Pushka — планировщик Web Push уведомлений
 
-![CI](https://github.com/mvladt/webpush-scheduler/actions/workflows/ci.yml/badge.svg)
-![Deploy](https://github.com/mvladt/webpush-scheduler/actions/workflows/deploy.yml/badge.svg)
+![CI](https://github.com/mvladt/pushka/actions/workflows/ci.yml/badge.svg)
+![Deploy](https://github.com/mvladt/pushka/actions/workflows/deploy.yml/badge.svg)
 
 ## Содержание
 
@@ -39,7 +39,7 @@
 
 **GET** `/api/key` — Получение VAPID ключа (публичного). Он нужен для получения [PushSubscription](https://developer.mozilla.org/en-US/docs/Web/API/PushSubscription) в браузере.
 
-**POST** `/api/notifications` — Планирование уведомления. В теле запроса должен быть объект [NotificationEntity](https://github.com/mvladt/webpush-scheduler/blob/main/src/types.ts).
+**POST** `/api/notifications` — Планирование уведомления. В теле запроса должен быть объект [NotificationEntity](https://github.com/mvladt/pushka/blob/main/src/types.ts).
 
 ### Примеры запросов
 
