@@ -1,11 +1,11 @@
 [Unit]
-Description=Webpush Scheduler
+Description=Pushka (webpush scheduler)
 After=network.target
 
 [Service]
 Type=simple
-User=webpush-scheduler
-WorkingDirectory=/srv/webpush-scheduler/current
+User=pushka
+WorkingDirectory=/srv/pushka/current
 ExecStart=/usr/bin/node src/main.ts
 Restart=on-failure
 RestartSec=3

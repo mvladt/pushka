@@ -44,11 +44,11 @@
 ### Примеры запросов
 
 ```sh
-curl -X GET 'https://scheduler.push.mvladt.ru/api/key'
+curl -X GET 'https://pushka.mvladt.ru/api/key'
 ```
 
 ```sh
-curl -X POST 'https://scheduler.push.mvladt.ru/api/notifications' \
+curl -X POST 'https://pushka.mvladt.ru/api/notifications' \
   -H 'Content-Type: application/json' \
   -d '{
     "id": "123",
@@ -94,7 +94,7 @@ graph LR
 
 ## Деплой
 
-Прод — `scheduler.push.mvladt.ru` (VPS, systemd). CI (`ci.yml`) гоняет тесты на каждый push/PR,
+Прод — `pushka.mvladt.ru` (VPS, systemd). CI (`ci.yml`) гоняет тесты на каждый push/PR,
 но деплой не автоматический: вкладка **Actions** → workflow **Deploy** → **Run workflow**
 (`workflow_dispatch`). Деплой собирает зависимости, синкает артефакт по SSH в новый релиз,
 переключает симлинк `current` и перезапускает сервис. Подробности — `deploy/README.md`.

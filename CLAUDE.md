@@ -55,7 +55,7 @@ Node.js >= 24.0 (нужен встроенный `node:sqlite`). При перв
 - **`.github/workflows/deploy.yml`** — только ручной `workflow_dispatch` (Actions → Deploy → Run
   workflow). **Не проверяет статус CI** и сам тесты не гоняет — перед запуском нужно вручную
   убедиться, что `ci.yml` зелёный на нужном коммите. Собирает `npm ci --omit=dev`, заливает
-  `src/`/`node_modules/`/`package*.json` по SSH в `/srv/webpush-scheduler/releases/<sha>`,
+  `src/`/`node_modules/`/`package*.json` по SSH в `/srv/pushka/releases/<sha>`,
   переключает симлинк `current`, перезапускает systemd-сервис.
 - **`.github/dependabot.yml`** — еженедельные PR на обновления npm-зависимостей и GitHub Actions.
 - Детали инфраструктуры (пользователь на сервере, nginx, TLS, откат) — `deploy/README.md`.

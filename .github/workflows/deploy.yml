@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: webpush-scheduler-deploy
+  group: pushka-deploy
   cancel-in-progress: false
 
 env:
   DEPLOY_HOST: 188.225.37.62
-  DEPLOY_USER: webpush-scheduler
-  DEPLOY_ROOT: /srv/webpush-scheduler
+  DEPLOY_USER: pushka
+  DEPLOY_ROOT: /srv/pushka
 
 jobs:
   deploy:
@@ -57,14 +57,14 @@ jobs:
             ln -sfn $DEPLOY_ROOT/data/.env $RELEASE/.env &&
             ln -sfn $DEPLOY_ROOT/data/notifications.db $RELEASE/notifications.db &&
             ln -sfn $RELEASE $DEPLOY_ROOT/current &&
-            sudo systemctl restart webpush-scheduler &&
+            sudo systemctl restart pushka &&
             ls -1dt $DEPLOY_ROOT/releases/*/ | tail -n +6 | xargs -r rm -rf
           "
 
       - name: Проверить прод
         run: |
           sleep 2
-          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 https://scheduler.push.mvladt.ru/api/health)
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 https://pushka.mvladt.ru/api/health)
           echo "Ответ /api/health: $code"
           if [ "$code" != "200" ]; then
             echo "Ожидался 200, получено $code"
