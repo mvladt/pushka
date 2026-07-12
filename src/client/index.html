@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Web Push — Клиент</title>
     <style>
       body {
@@ -155,7 +158,22 @@
         throw err;
       }
 
-      // --- 3. Получение VAPID-ключа ---
+      // --- 3. Проверка поддержки Push API (на iOS доступен только для сайта,
+      //        добавленного на экран «Домой» — обычная вкладка Safari не подходит) ---
+
+      if (!("Notification" in window) || !("PushManager" in window)) {
+        const isIosOutsideHomeScreen =
+          "standalone" in navigator && navigator.standalone === false;
+        const hint = isIosOutsideHomeScreen
+          ? "добавьте страницу на экран «Домой» (Поделиться → «На экран Домой», нужен iOS 16.4+) и откройте её оттуда"
+          : "push не поддерживается в этом браузере";
+        setStatus(statusPermission, false, "Разрешение: " + hint);
+        setStatus(statusSubscription, false, "Push-подписка: недоступно");
+        document.getElementById("form-section").hidden = true;
+        throw new Error("Push API недоступен: " + hint);
+      }
+
+      // --- 4. Получение VAPID-ключа ---
 
       let vapidPublicKey;
       try {
@@ -167,7 +185,7 @@
         throw err;
       }
 
-      // --- 4. Разрешение на уведомления ---
+      // --- 5. Разрешение на уведомления ---
 
       function updatePermissionStatus() {
         const perm = Notification.permission;
@@ -197,7 +215,7 @@
         }
       });
 
-      // --- 5. Push-подписка ---
+      // --- 6. Push-подписка ---
 
       async function subscribeForPush() {
         if (!registration.pushManager) {
@@ -238,7 +256,7 @@
         );
       }
 
-      // --- 6. Получение push-сообщений от SW ---
+      // --- 7. Получение push-сообщений от SW ---
 
       navigator.serviceWorker.addEventListener("message", (event) => {
         if (event.data && event.data.type === "PUSH_RECEIVED") {
@@ -251,7 +269,7 @@
         }
       });
 
-      // --- 7. Отправка формы ---
+      // --- 8. Отправка формы ---
 
       btnSchedule.addEventListener("click", async () => {
         const title = inputTitle.value.trim();
