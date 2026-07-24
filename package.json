@@ -10,7 +10,11 @@
     "test:playwright": "npx playwright test",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "prepare": "simple-git-hooks"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "npm run lint && npm run format:check"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -24,6 +28,7 @@
     "@types/node": "^24.6.2",
     "eslint": "^10.7.0",
     "prettier": "^3.9.6",
+    "simple-git-hooks": "^2.13.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.65.0"
   },
