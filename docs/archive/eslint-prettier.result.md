@@ -9,10 +9,11 @@
 - `.prettierignore` — `package-lock.json`, `*.md`, `data`, `.claude` (локальный, глобально
   гитигнорен).
 - `package.json`: скрипты `lint` (`eslint .`), `format` (`prettier --write .`),
-  `format:check` (`prettier --check .`), `prepare` (`simple-git-hooks`).
+  `format:check` (`prettier --check .`), `prepare` (`simple-git-hooks || true`).
 - Pre-commit хук через `simple-git-hooks` (`npm run lint && npm run format:check`) —
   устанавливается `prepare`-скриптом, не встроенным `postinstall` пакета (npm 11+ по умолчанию
-  блокирует install-скрипты зависимостей).
+  блокирует install-скрипты зависимостей). `|| true` — иначе `deploy.yml` (`npm ci --omit=dev`)
+  падал бы: без dev-зависимостей бинаря `simple-git-hooks` нет, `prepare` всё равно запускается.
 - `.github/workflows/ci.yml`: в job `test` добавлены шаги `Lint` и `Форматирование` (после
   `Typecheck`, перед тестами).
 - По ходу правки под `no-explicit-any`: `Logger.log`/`Logger.error` — `any[]` → `unknown[]`;
@@ -36,6 +37,9 @@
 - `npm run test:env`, `test:sqliteStore`, `test:integration` — все зелёные, после автофикса
   поведение не изменилось.
 - Pre-commit хук проверен на практике — реально отработал перед последним коммитом задачи.
+- `npm ci --omit=dev` (путь `deploy.yml`) — проверено отдельно: без фикса `prepare` падал
+  (`simple-git-hooks: not found`, exit 127), с `|| true` проходит, хук просто не ставится.
+  Обычный `npm ci` (с dev-зависимостями) — хук по-прежнему ставится и работает.
 
 ## Не проверено / не сделано
 
