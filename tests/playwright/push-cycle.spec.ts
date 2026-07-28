@@ -52,7 +52,7 @@ test("Полный цикл push-уведомления: подписка → п
   await swPromise;
 
   // 2. Ждём успешной push-подписки (FCM может отвечать медленно)
-  await expect(page.locator("#status-subscription")).toContainText("✓", {
+  await expect(page.locator("#status-subscription")).toContainText("активна", {
     timeout: 60000,
   });
 
