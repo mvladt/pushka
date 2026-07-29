@@ -59,7 +59,7 @@ CLI/MCP-инструмент поверх Pushka (agent-friendly curl/CLI, об�
 Даунтайм несколько секунд, сделано одним заходом по SSH (скриптом).
 
 - [x] Бэкап БД перед началом: `/root/notifications.db.bak.<timestamp>` (бэкапов до этого не
-      было вообще, см. `docs/sqlite-backup.task.md`).
+      было вообще, см. `docs/sqlite-backup-task.md`).
 - [x] Остановить сервис: `systemctl stop webpush-scheduler`, проверено что процессов
       пользователя не осталось (`pgrep -u webpush-scheduler`).
 - [x] Переименовать системного пользователя с сохранением `uid` (994) и переносом `$HOME`
@@ -127,9 +127,9 @@ CLI/MCP-инструмент поверх Pushka (agent-friendly curl/CLI, об�
 
 - [ ] `src/client/index.html` — заголовок страницы «Web Push — Клиент» → «Pushka» (опционально,
       не блокирует остальное).
-- [ ] `docs/sqlite-migrations.task.md`, `docs/sqlite-backup.task.md` — обновить упомянутые
+- [ ] `docs/sqlite-migrations-task.md`, `docs/sqlite-backup-task.md` — обновить упомянутые
       серверные пути (`/srv/webpush-scheduler/...` → `/srv/pushka/...`).
-- [ ] Архивные `docs/cicd.plan.md` / `docs/cicd.result.md` / `docs/cicd.task.md` — **не трогать**,
+- [ ] Архивные `docs/cicd-plan.md` / `docs/cicd-result.md` / `docs/cicd-task.md` — **не трогать**,
       это исторический протокол того, что происходило под старым именем.
 
 ---
@@ -144,7 +144,7 @@ CLI/MCP-инструмент поверх Pushka (agent-friendly curl/CLI, об�
 | Переименовать | `deploy/webpush-scheduler.service` → `deploy/pushka.service` | 4 |
 | Переименовать | `nginx/webpush-scheduler.conf` → `nginx/pushka.conf`  | 4    |
 | Изменить  | `deploy/README.md`                                     | 4    |
-| Изменить  | `docs/sqlite-migrations.task.md`, `docs/sqlite-backup.task.md` | 6 |
+| Изменить  | `docs/sqlite-migrations-task.md`, `docs/sqlite-backup-task.md` | 6 |
 | Изменить (на сервере) | системный пользователь + `$HOME`           | 3    |
 | Создать/удалить (на сервере) | `/etc/systemd/system/pushka.service` (+ удалить старый) | 3 |
 | Создать/удалить (на сервере) | `/etc/sudoers.d/pushka-deploy` (+ удалить старый) | 3 |

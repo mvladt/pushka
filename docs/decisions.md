@@ -11,7 +11,7 @@
 Защита от supply-chain атаки — тег экшена мутабельный, владелец может переставить его на другой
 коммит (умышленно или после компрометации аккаунта). Стало возможно только после появления
 Dependabot (иначе ручной pin — неподдерживаемый ад): он сам обновляет SHA при выходе новой
-версии. Подробности: `docs/archive/pin-actions-by-sha.result.md`.
+версии. Подробности: `docs/archive/pin-actions-by-sha-result.md`.
 
 ## 2026-07-29 — Не подключаем CodeQL
 
@@ -21,11 +21,11 @@ Dependabot (иначе ручной pin — неподдерживаемый а�
 `subscription.endpoint`) — дефолтный taint-tracking CodeQL их бы не поймал в принципе, поток
 данных пересекает границу персистентности в SQLite. Пересмотреть при появлении рендеринга
 сохранённого/пользовательского контента в HTML, admin-панели или более чувствительных данных.
-Подробности: `docs/security-review.result.md`, `docs/cicd.plan.md` (4.2).
+Подробности: `docs/security-review-result.md`, `docs/cicd-plan.md` (4.2).
 
 ## 2026-07-29 — Branch protection на `main` включена, PR-review — нет
 
 Required status check `test` (strict), запрет force-push и удаления ветки. Required PR review
 осознанно не включали — проект перешёл на issue-driven флоу (агент работает через branch + PR),
 но ревью каждого PR человеком не стало обязательным условием для мержа. Подробности:
-`docs/cicd.plan.md` (4.3).
+`docs/cicd-plan.md` (4.3).
