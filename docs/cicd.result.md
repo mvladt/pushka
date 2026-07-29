@@ -129,7 +129,39 @@ integration) был зелёным с первого раза.
 приложением при первом старте. Внешняя проверка `https://scheduler.push.mvladt.ru/api/health` —
 `200`.
 
-## Этапы 4–5 — не начаты
+## Этап 4. Безопасность и автоматизация — частично выполнено
 
-Dependabot, CodeQL, branch protection, pin-by-SHA, PR-template, документация README/CLAUDE.md —
-следующая итерация.
+### Сделано
+
+- **4.1 Dependabot** — `.github/dependabot.yml` работает (npm + github-actions, weekly). За время
+  работы смержено 6 PR (actions/checkout, actions/setup-node, actions/upload-artifact,
+  @playwright/test и др.). На момент актуализации документа — **4 открытых PR** ждут решения:
+  `typescript` 5.9.3→7.0.2, `express` 5.1.0→5.2.1, `@types/node` 24.6.2→26.1.1,
+  `cors` 2.8.5→2.8.6. `typescript` 5.9.3→6.0.3 был закрыт вручную (заменён на 7.0.2).
+- **4.3 Branch protection на `main`** — настроена (см. обновлённый `cicd.plan.md`, 4.3): required
+  status check `test` (strict), запрет force-push и удаления ветки. PR-review не обязателен
+  (`enforce_admins: false`). Изначально план откладывал этот пункт, аргументируя тем, что в
+  проекте нет PR-флоу — с тех пор проект перешёл на issue-driven работу (branch + PR вместо
+  прямого push в `main`, см. память агента), поэтому status checks теперь реально блокируют
+  слияние, а не только защищают историю.
+- **4.4 GitHub Environment** — осознанно не заводили (см. план).
+
+### Не сделано
+
+- **4.2 CodeQL** — workflow не создан (`.github/workflows/` содержит только `ci.yml` и
+  `deploy.yml`).
+- **4.5 Pin actions by SHA** — вынесено в `docs/pin-actions-by-sha.task.md`, к работе не
+  приступали.
+
+## Этап 5. Документация и удобство — выполнено (кроме PR-template, который решили не делать)
+
+- **5.1 README** — бейджи CI/Deploy и раздел «Деплой» добавлены.
+- **5.2 PR-template** — сознательно не делаем, обоснование не изменилось (issue-driven флоу всё
+  же использует PR, но шаблон для одиночного автора признан лишним).
+- **5.3 CLAUDE.md** — раздел «CI/CD» добавлен. Пункт про `npm run typecheck` как отдельный скрипт
+  — опционален, не сделан.
+
+## Что осталось
+
+CodeQL (4.2), pin-by-SHA (4.5, отдельная задача) и разбор 4 зависших Dependabot-PR — следующая
+итерация.

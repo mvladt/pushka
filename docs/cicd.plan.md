@@ -294,21 +294,22 @@ ssh webpush-scheduler@188.225.37.62 "
 - [ ] Запуск: на push в `main`, на PR, по cron раз в неделю.
 - [ ] Для публичного репо бесплатен — у нас именно так.
 
-### 4.3. Branch protection на `main` — решение отложено
+### 4.3. Branch protection на `main` — выполнено
 
-В Settings → Branches → Add rule `main`:
+Настроено в Settings → Branches → rule `main` (проверено через `gh api
+repos/mvladt/pushka/branches/main/protection`):
 
-- [ ] Require status checks to pass: `test`, `e2e` (когда стабилизируется), `codeql`.
-- [ ] Require branches to be up to date before merging.
-- [ ] Disallow force pushes.
-- [ ] Disallow deletions.
-- [ ] PR-перед-merge — на усмотрение. Для одиночного автора можно оставить прямой push в main с обязательными checks.
-
-**Важный нюанс:** в проекте нет PR-флоу — пушим прямо в `main`. Классический «require status
-checks to pass» у GitHub блокирует только **слияние PR**, а не прямой push — коммит уже попадёт в
-`main` до того, как отработают `test`/`e2e`. То есть на практике из всего списка реальный эффект
-дают только «disallow force pushes» и «disallow deletions» (защита истории), а не status checks.
-Ждём решения пользователя — делать ли хотя бы эти два пункта.
+- [x] Require status checks to pass: `test` (`strict: true` — ветка должна быть актуальной).
+      `e2e` и `codeql` в обязательные не включены — `e2e` подвержен флаку (см. этап 1), `codeql`
+      ещё не существует (4.2).
+- [x] Require branches to be up to date before merging.
+- [x] Disallow force pushes.
+- [x] Disallow deletions.
+- [ ] Required PR review — не включено, `required_pull_request_reviews` в API отсутствует.
+      Проект тем временем перешёл на issue-driven флоу (branch + PR вместо прямого push в `main`),
+      так что status checks теперь реально блокируют слияние, а не только защищают историю, как
+      предполагалось при написании этого пункта.
+- `enforce_admins: false` — владелец репозитория может обойти защиту, это осознанно не включали.
 
 ### 4.4. GitHub Environment `production` — не заводим
 
