@@ -321,10 +321,10 @@ repos/mvladt/pushka/branches/main/protection`):
 работает так же, без `environment:` — секреты (3.4) достаточно держать на уровне репозитория.
 Можно вернуться к этому пункту, если деплой снова станет автоматическим.
 
-### 4.5. Pin actions by SHA — вынесено в отдельную задачу
+### 4.5. Pin actions by SHA — выполнено
 
-См. `docs/pin-actions-by-sha.task.md`. Было отложено до появления Dependabot (иначе ручной pin —
-неподдерживаемый ад); Dependabot теперь есть (4.1), можно делать в отдельной итерации.
+Все `uses:` в `ci.yml`/`deploy.yml` закреплены по полному SHA (с комментарием версии). Детали и
+обоснование — `docs/archive/pin-actions-by-sha.task.md` + `docs/archive/pin-actions-by-sha.result.md`.
 
 ---
 
