@@ -3,81 +3,57 @@
 ![CI](https://github.com/mvladt/pushka/actions/workflows/ci.yml/badge.svg)
 ![Deploy](https://github.com/mvladt/pushka/actions/workflows/deploy.yml/badge.svg)
 
-## Содержание
+Принимает от клиента [Push Subscription](https://developer.mozilla.org/en-US/docs/Web/API/PushSubscription), `datetime` (_когда_ отправить) и `payload` (_что_ отправить). Сохраняет в SQLite и в нужный момент отправляет через Web Push Protocol.
 
-- [Возможности](#возможности)
-- [Установка и запуск](#установка-и-запуск)
-- [Описание API](#описание-api)
-- [Хранилище](#хранилище)
-- [Архитектура](#архитектура)
-- [Деплой](#деплой)
+**Демо:** [pushka.mvladt.ru](https://pushka.mvladt.ru) — встроенная страница-клиент: подписка на push и планирование тестового уведомления.
 
-[Простой клиент](https://github.com/mvladt/webpush-dumb-client)
+> В РФ доставка в Chrome/Android может не работать из-за блокировки FCM; на iOS уведомления идут через APNs и доходят. Детали — `docs/push-delivery-ru-blocked.result.md`.
 
-Простой планировщик Web Push-уведомлений на Nodejs.
+## Запуск
 
-Принимает от клиента [Push Subscription](https://developer.mozilla.org/en-US/docs/Web/API/PushSubscription), `datetime` (_когда_ отправить) и `payload` (_что_ отправить). Кладёт всё это дело в хранилище. Извлекает уведомления по расписанию и отправляет _в нужный момент_.
-
-## Возможности
-
-- Приём и хранение уведомлений
-- Планирование уведомлений на указанное время
-- Автоматическая отправка уведомлений через Web Push Protocol
-
-## Установка и запуск
-
-Ограничение — версия Nodejs _не меньше_ «24.0».
-
-1. `npm ci`
-2. `npm start`
-
-При первом запуске VAPID-ключи генерируются автоматически. Для кастомных значений (`VAPID_SUBJECT`, `PORT`) — отредактировать `.env` после первого запуска.
-
-## Описание API
-
-### Эндпоинты
-
-**GET** `/api/key` — Получение VAPID ключа (публичного). Он нужен для получения [PushSubscription](https://developer.mozilla.org/en-US/docs/Web/API/PushSubscription) в браузере.
-
-**POST** `/api/notifications` — Планирование уведомления. В теле запроса должен быть объект [NotificationEntity](https://github.com/mvladt/pushka/blob/main/src/types.ts).
-
-### Примеры запросов
+Требуется Node.js **≥ 24** (встроенный `node:sqlite`).
 
 ```sh
-curl -X GET 'https://pushka.mvladt.ru/api/key'
+npm ci
+npm start
 ```
+
+При первом запуске `.env` создаётся автоматически с новыми VAPID-ключами. Кастомные значения (`PORT`, `VAPID_SUBJECT`) — отредактировать `.env`.
+
+Через Docker:
+
+```sh
+docker compose up --build
+```
+
+## API
+
+| Метод  | Путь                 | Описание                                                                                                        |
+| ------ | -------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/api/key`           | Публичный VAPID-ключ — нужен браузеру для получения Push Subscription                                            |
+| `POST` | `/api/notifications` | Запланировать уведомление — в теле [NotificationEntity](https://github.com/mvladt/pushka/blob/main/src/types.ts) |
+| `GET`  | `/api/health`        | Проверка живости                                                                                                 |
 
 ```sh
 curl -X POST 'https://pushka.mvladt.ru/api/notifications' \
   -H 'Content-Type: application/json' \
   -d '{
     "id": "123",
-    "datetime": "2025-11-09T00:23",
+    "datetime": "2026-01-01T12:00",
     "payload": {"text": "Hello"},
     "subscription": {
       "endpoint": "https://fcm.googleapis.com/fcm/send/...",
       "expirationTime": null,
-      "keys": {
-        "p256dh": "...",
-        "auth": "..."
-      }
+      "keys": {"p256dh": "...", "auth": "..."}
     }
   }'
 ```
 
+Полная спецификация — `specs/api/openapi.json`.
+
 ## Хранилище
 
-Уведомления хранятся в SQLite — файл `notifications.db` в корне проекта (создаётся автоматически при первом запуске, в git не попадает).
-
-- `payload` и `subscription` хранятся как JSON-строки.
-- `datetime` нормализуется в канонический UTC-ISO (`new Date(...).toISOString()`), по нему построен индекс `idx_notifications_datetime` для быстрой выборки уведомлений «к отправке».
-- Миграция старых данных из `notifications.json` автоматически не выполняется — при переходе на SQLite база стартует пустой, а старый JSON-файл остаётся нетронутым.
-
-Посмотреть содержимое базы:
-
-```sh
-sqlite3 notifications.db 'SELECT id, datetime FROM notifications;'
-```
+SQLite-файл `notifications.db` в корне проекта, создаётся автоматически. `datetime` нормализуется в UTC-ISO, по нему построен индекс для выборки уведомлений «к отправке».
 
 ## Архитектура
 
@@ -92,13 +68,20 @@ graph LR
     F --> G[Браузер<br>Service Worker];
 ```
 
+## Разработка
+
+```sh
+npm run dev              # dev-сервер с watch-режимом
+npm run test:env         # unit-тесты загрузки .env
+npm run test:sqliteStore # unit-тесты SQLite-хранилища
+npm run test:integration # интеграционные тесты
+npm run test:playwright  # e2e-тесты (Playwright)
+```
+
 ## Деплой
 
-Прод — `pushka.mvladt.ru` (VPS, systemd). CI (`ci.yml`) гоняет тесты на каждый push/PR,
-но деплой не автоматический: вкладка **Actions** → workflow **Deploy** → **Run workflow**
-(`workflow_dispatch`). Деплой собирает зависимости, синкает артефакт по SSH в новый релиз,
-переключает симлинк `current` и перезапускает сервис. Подробности — `deploy/README.md`.
+Прод — `pushka.mvladt.ru` (VPS, systemd). CI гоняет тесты на каждый push/PR, деплой запускается вручную: **Actions → Deploy → Run workflow**. Подробности — `deploy/README.md`.
 
 ---
 
-_Это демонстрационный проект, показывающий полный цикл работы с Web Push Notifications._
+_Демонстрационный проект, показывающий полный цикл работы с Web Push Notifications._
