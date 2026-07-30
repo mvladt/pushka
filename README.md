@@ -3,11 +3,9 @@
 ![CI](https://github.com/mvladt/pushka/actions/workflows/ci.yml/badge.svg)
 ![Deploy](https://github.com/mvladt/pushka/actions/workflows/deploy.yml/badge.svg)
 
-Принимает от клиента [Push Subscription](https://developer.mozilla.org/en-US/docs/Web/API/PushSubscription), `datetime` (_когда_ отправить) и `payload` (_что_ отправить). Сохраняет в SQLite и в нужный момент отправляет через Web Push Protocol.
+Принимает от клиента [Push Subscription](https://developer.mozilla.org/en-US/docs/Web/API/PushSubscription), `datetime` (_когда_ отправить) и `payload` (_что_ отправить). Сохраняет в хранилище и в нужный момент отправляет через Web Push Protocol.
 
 **Демо:** [pushka.mvladt.ru](https://pushka.mvladt.ru) — встроенная страница-клиент: подписка на push и планирование тестового уведомления.
-
-> В РФ доставка в Chrome/Android может не работать из-за блокировки FCM; на iOS уведомления идут через APNs и доходят. Детали — `docs/push-delivery-ru-blocked.result.md`.
 
 ## Запуск
 
@@ -50,10 +48,6 @@ curl -X POST 'https://pushka.mvladt.ru/api/notifications' \
 ```
 
 Полная спецификация — `specs/api/openapi.json`.
-
-## Хранилище
-
-SQLite-файл `notifications.db` в корне проекта, создаётся автоматически. `datetime` нормализуется в UTC-ISO, по нему построен индекс для выборки уведомлений «к отправке».
 
 ## Архитектура
 
