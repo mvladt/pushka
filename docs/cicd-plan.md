@@ -31,7 +31,7 @@
 - [x] `npm ci`
 - [x] **Typecheck:** `npx tsc` (использует существующий `tsconfig.json` с `noEmit: true`)
 - [x] **Unit-тесты env:** `npm run test:env`
-- [x] ~~**Unit-тесты jsonStore:** `npm run test:jsonStore`~~ — `jsonStore` удалён: прод на SQLite, тестовая инфра переведена на `createSqliteStore(":memory:")`. См. техдолг в `cicd.result.md`.
+- [x] ~~**Unit-тесты jsonStore:** `npm run test:jsonStore`~~ — `jsonStore` удалён: прод на SQLite, тестовая инфра переведена на `createSqliteStore(":memory:")`. См. техдолг в `cicd-result.md`.
 - [x] **Unit-тесты sqliteStore:** `npm run test:sqliteStore` _(добавлено — появилось после миграции на SQLite, плана ещё не было)_
 - [x] **Integration-тесты:** `npm run test:integration`
 - [x] **Аудит npm:** `npm audit --audit-level=high` (не падает на low/moderate). При внедрении нашёл 2 high + 3 moderate в транзитивных зависимостях (`jws`, `path-to-regexp`, `qs`, `body-parser`, `bn.js`) — устранены через `npm audit fix`.
@@ -203,7 +203,7 @@ WantedBy=multi-user.target
       отличие от `dexity`, где `server/dist` собирается через `tsc`/бандлер.
 - [x] Артефакт — `src/`, `package.json`, `package-lock.json`, `node_modules/` после
       `npm ci --omit=dev`. Так как `better-sqlite3` убран (переход на `node:sqlite`, см.
-      `docs/archive/node24-builtin-sqlite.result.md`), `node_modules` состоит только из чистого JS —
+      `docs/archive/node24-builtin-sqlite-result.md`), `node_modules` состоит только из чистого JS —
       переносится с раннера CI на сервер без проблем с нативными бинарниками/архитектурой.
 
 ### 3.2. Подготовка SSH-доступа для CI
@@ -284,31 +284,35 @@ ssh webpush-scheduler@188.225.37.62 "
       schedule: { interval: weekly }
   ```
 - [x] **Docker-эконосистему пока не включаем** — Dockerfile не используется в CD.
-- [x] **CodeQL (4.2) сознательно отложен** — маленький кодбейс, нет динамического SQL/`eval`/
-      рендеринга пользовательского ввода в HTML на сервере, отдача от статического анализа низкая.
-      Вернуться к вопросу, если кодовая база вырастет.
+- [x] **CodeQL (4.2) — не делаем** (не «отложено», решение принято). Низкий ROI для проекта
+      такого размера: нет динамического SQL/`eval`/рендеринга пользовательского ввода в HTML на
+      сервере. Дополнительно проверено на конкретном примере — см. `security-review-result.md`:
+      дефолтный taint-tracking CodeQL не отслеживает поток через границу персистентности в БД,
+      то есть реальные находки того ревью (открытый неаутентифицированный `POST
+      /api/notifications`, отсутствие валидации `endpoint`) он бы всё равно не поймал. Пересмотреть
+      при появлении рендеринга сохранённого/пользовательского контента в HTML, admin-панели или
+      более чувствительных данных.
 
-### 4.2. CodeQL
+### 4.2. CodeQL — не делаем
 
-- [ ] `.github/workflows/codeql.yml` — стандартный шаблон GitHub для JavaScript/TypeScript.
-- [ ] Запуск: на push в `main`, на PR, по cron раз в неделю.
-- [ ] Для публичного репо бесплатен — у нас именно так.
+См. обоснование выше.
 
-### 4.3. Branch protection на `main` — решение отложено
+### 4.3. Branch protection на `main` — выполнено
 
-В Settings → Branches → Add rule `main`:
+Настроено в Settings → Branches → rule `main` (проверено через `gh api
+repos/mvladt/pushka/branches/main/protection`):
 
-- [ ] Require status checks to pass: `test`, `e2e` (когда стабилизируется), `codeql`.
-- [ ] Require branches to be up to date before merging.
-- [ ] Disallow force pushes.
-- [ ] Disallow deletions.
-- [ ] PR-перед-merge — на усмотрение. Для одиночного автора можно оставить прямой push в main с обязательными checks.
-
-**Важный нюанс:** в проекте нет PR-флоу — пушим прямо в `main`. Классический «require status
-checks to pass» у GitHub блокирует только **слияние PR**, а не прямой push — коммит уже попадёт в
-`main` до того, как отработают `test`/`e2e`. То есть на практике из всего списка реальный эффект
-дают только «disallow force pushes» и «disallow deletions» (защита истории), а не status checks.
-Ждём решения пользователя — делать ли хотя бы эти два пункта.
+- [x] Require status checks to pass: `test` (`strict: true` — ветка должна быть актуальной).
+      `e2e` и `codeql` в обязательные не включены — `e2e` подвержен флаку (см. этап 1), `codeql`
+      ещё не существует (4.2).
+- [x] Require branches to be up to date before merging.
+- [x] Disallow force pushes.
+- [x] Disallow deletions.
+- [ ] Required PR review — не включено, `required_pull_request_reviews` в API отсутствует.
+      Проект тем временем перешёл на issue-driven флоу (branch + PR вместо прямого push в `main`),
+      так что status checks теперь реально блокируют слияние, а не только защищают историю, как
+      предполагалось при написании этого пункта.
+- `enforce_admins: false` — владелец репозитория может обойти защиту, это осознанно не включали.
 
 ### 4.4. GitHub Environment `production` — не заводим
 
@@ -317,10 +321,10 @@ checks to pass» у GitHub блокирует только **слияние PR**
 работает так же, без `environment:` — секреты (3.4) достаточно держать на уровне репозитория.
 Можно вернуться к этому пункту, если деплой снова станет автоматическим.
 
-### 4.5. Pin actions by SHA — вынесено в отдельную задачу
+### 4.5. Pin actions by SHA — выполнено
 
-См. `docs/pin-actions-by-sha.task.md`. Было отложено до появления Dependabot (иначе ручной pin —
-неподдерживаемый ад); Dependabot теперь есть (4.1), можно делать в отдельной итерации.
+Все `uses:` в `ci.yml`/`deploy.yml` закреплены по полному SHA (с комментарием версии). Детали и
+обоснование — `docs/archive/pin-actions-by-sha-task.md` + `docs/archive/pin-actions-by-sha-result.md`.
 
 ---
 
@@ -403,7 +407,7 @@ checks to pass» у GitHub блокирует только **слияние PR**
    перехода на паттерн `dexity` — **ручной `workflow_dispatch`** (см. вопрос D ниже и этап 3.3).
 5. ~~`/api/health`?~~ → есть, `src/router/router.ts`.
 6. ~~Playwright в CI?~~ → да, всегда.
-7. ~~ESLint/Prettier?~~ → отложено, см. `eslint-prettier.task.md`.
+7. ~~ESLint/Prettier?~~ → отложено, см. `eslint-prettier-task.md`.
 
 **Ответы на открытые вопросы A–E (первая версия плана, до переустановки сервера).**
 Актуальны только как история решений — сервер был переустановлен, обнаружился конфликт портов и
