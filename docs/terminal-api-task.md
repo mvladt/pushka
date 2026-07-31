@@ -35,8 +35,19 @@ curl -sX POST 'https://pushka.mvladt.ru/api/pair'
 **Шаг 3. Агент опрашивает сессию, пока не получит подписку**
 
 ```sh
-curl -s "https://pushka.mvladt.ru/api/pair/$PAIRING_ID" | jq -e '.subscription' > ~/.pushka/subscription.json
+mkdir -p ~/.pushka
+until curl -s "https://pushka.mvladt.ru/api/pair/$PAIRING_ID" \
+    | jq -e '.subscription' > ~/.pushka/subscription.json.part; do
+  sleep 2   # пока status=pending, ключа .subscription нет и jq -e выходит с ненулевым кодом
+done
+mv ~/.pushka/subscription.json.part ~/.pushka/subscription.json
 ```
+
+Пишем во временный файл и переименовываем в конце намеренно: `> file` обрезает цель **до** того,
+как отработает `jq`, поэтому наивный однострочник, запущенный слишком рано, затёр бы уже
+имеющуюся подписку. Цикл выходит по TTL сессии — если человек не открыл ссылку за 10 минут,
+`GET` начнёт отдавать `404` (тогда `jq -e` тоже не найдёт ключ, и это стоит различать в реальном
+скрипте — готовый рецепт с обработкой ошибок даём в README).
 
 **Шаг 4. Дальше — сколько угодно уведомлений, без браузера**
 
@@ -56,15 +67,15 @@ curl -sX POST 'https://pushka.mvladt.ru/api/notifications' \
 
 ## Функциональные требования
 
-| №   | Требование                                                                                   |
-| --- | -------------------------------------------------------------------------------------------- |
-| 1   | `POST /api/pair` создаёт сессию и возвращает `pairingId`, `pairingUrl`, `expiresAt`           |
-| 2   | `GET /api/pair/:pairingId` возвращает `{"status":"pending"}` либо `{"status":"ready", …}`     |
-| 3   | `PUT /api/pair/:pairingId` принимает `subscription` от браузера                               |
-| 4   | Страница-клиент в режиме `?pair=<id>` после подписки сама отправляет `PUT`                    |
-| 5   | `POST /api/notifications` возвращает `201` с телом `{"id": "…"}` — id генерирует **сервер**   |
+| №   | Требование                                                                                     |
+| --- | ---------------------------------------------------------------------------------------------- |
+| 1   | `POST /api/pair` создаёт сессию и возвращает `pairingId`, `pairingUrl`, `expiresAt`            |
+| 2   | `GET /api/pair/:pairingId` возвращает `{"status":"pending"}` либо `{"status":"ready", …}`      |
+| 3   | `PUT /api/pair/:pairingId` принимает `subscription` от браузера                                |
+| 4   | Страница-клиент в режиме `?pair=<id>` после подписки сама отправляет `PUT`                     |
+| 5   | `POST /api/notifications` возвращает `201` с телом `{"id": "…"}` — id генерирует **сервер**    |
 | 6   | Тело `POST /api/notifications` валидируется: формат `subscription`, `datetime`, размер payload |
-| 7   | `datetime` от API-клиента требует явной таймзоны (`Z` или `±hh:mm`)                           |
+| 7   | `datetime` от API-клиента требует явной таймзоны (`Z` или `±hh:mm`)                            |
 | 8   | Rate limit по IP и ограничение горизонта планирования                                          |
 | 9   | Все ответы API — JSON, пригодный для `jq`; README и OpenAPI содержат рабочие curl-рецепты      |
 
