@@ -29,3 +29,12 @@ Required status check `test` (strict), запрет force-push и удалени
 осознанно не включали — проект перешёл на issue-driven флоу (агент работает через branch + PR),
 но ревью каждого PR человеком не стало обязательным условием для мержа. Подробности:
 `docs/cicd-plan.md` (4.3).
+
+## 2026-07-31 — Нативный вид `datetime-local` снимаем только на iOS
+
+Поле «Время» вылезало за колонку на iPhone (issue #12): iOS Safari рисует `datetime-local`
+собственным UA-виджетом, который игнорирует `width: 100%` и рамку из общего правила `input {}`.
+Лечится `appearance: none`, но применяем его под `@supports (-webkit-touch-callout: none)`, а не
+глобально: на десктопе баг не воспроизводится, а глобальный `appearance: none` отобрал бы у
+Chrome/Firefox привычный нативный виджет с иконкой календаря — риск регрессии без выгоды.
+Подробности: `docs/ios-datetime-input-plan.md`, `docs/ios-datetime-input-result.md`.
