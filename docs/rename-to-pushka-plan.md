@@ -129,7 +129,7 @@ CLI/MCP-инструмент поверх Pushka (agent-friendly curl/CLI, об�
       не блокирует остальное).
 - [ ] `docs/sqlite-migrations-task.md`, `docs/sqlite-backup-task.md` — обновить упомянутые
       серверные пути (`/srv/webpush-scheduler/...` → `/srv/pushka/...`).
-- [ ] Архивные `docs/cicd-plan.md` / `docs/cicd-result.md` / `docs/cicd-task.md` — **не трогать**,
+- [ ] Архивные `docs/archive/cicd-plan.md` / `cicd-result.md` / `cicd-task.md` — **не трогать**,
       это исторический протокол того, что происходило под старым именем.
 
 ---
