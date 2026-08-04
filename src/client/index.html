@@ -76,6 +76,23 @@
         border-radius: 6px;
         background: #fff;
       }
+      /* iOS Safari рисует datetime-local нативным виджетом: игнорирует width:100%
+         и рамку из общего правила input, поле вылезает за колонку (issue #12).
+         Снимаем нативный вид только на iOS — @supports (-webkit-touch-callout: none)
+         срабатывает только там, десктопные браузеры виджет сохраняют. */
+      @supports (-webkit-touch-callout: none) {
+        input[type="datetime-local"] {
+          -webkit-appearance: none;
+          appearance: none;
+          display: block;
+        }
+        /* Без нативного вида пустое поле схлопывается по высоте, а значение
+           iOS центрирует — выравниваем как у текстовых полей. */
+        input[type="datetime-local"]::-webkit-date-and-time-value {
+          text-align: left;
+          min-height: 1.5em;
+        }
+      }
       button {
         font: inherit;
         padding: 9px 16px;
