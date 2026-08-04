@@ -4,6 +4,11 @@ updates:
     directory: "/"
     schedule: { interval: weekly }
     open-pull-requests-limit: 5
+    ignore:
+      # Типы Node не должны обгонять рантайм по мажору: иначе tsc пропустит
+      # вызов API, которого нет в Node 24. Снять при переезде на новый мажор.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: "/"
     schedule: { interval: weekly }
