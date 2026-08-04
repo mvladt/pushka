@@ -21,14 +21,14 @@ Dependabot (иначе ручной pin — неподдерживаемый а�
 `subscription.endpoint`) — дефолтный taint-tracking CodeQL их бы не поймал в принципе, поток
 данных пересекает границу персистентности в SQLite. Пересмотреть при появлении рендеринга
 сохранённого/пользовательского контента в HTML, admin-панели или более чувствительных данных.
-Подробности: `docs/security-review-result.md`, `docs/cicd-plan.md` (4.2).
+Подробности: `docs/security-review-result.md`, `docs/archive/cicd-plan.md` (4.2).
 
 ## 2026-07-29 — Branch protection на `main` включена, PR-review — нет
 
 Required status check `test` (strict), запрет force-push и удаления ветки. Required PR review
 осознанно не включали — проект перешёл на issue-driven флоу (агент работает через branch + PR),
 но ревью каждого PR человеком не стало обязательным условием для мержа. Подробности:
-`docs/cicd-plan.md` (4.3).
+`docs/archive/cicd-plan.md` (4.3).
 
 ## 2026-07-31 — Нативный вид `datetime-local` снимаем только на iOS
 

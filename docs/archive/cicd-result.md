@@ -202,5 +202,6 @@ integration) был зелёным с первого раза.
   на ровном месте. Лечится добавлением `branches: [main]` в `push:` — заведено как issue #23.
 - **Два новых PR** после разблокировки лимита: #20 (`@types/node` 24.6.2 → 24.13.3) и #21
   (`@playwright/test` 1.61.1 → 1.62.1) — не разбирались.
-- **Архивация cicd-доков.** Работа по эпику завершена, `cicd-plan.md`/`cicd-task.md`/
-  `cicd-result.md` пора перенести в `docs/archive/`, поправив ссылки в корневом `CLAUDE.md`.
+
+Эпик закрыт: `cicd-plan.md`, `cicd-task.md` и этот результат перенесены в `docs/archive/`,
+ссылки в корневом `CLAUDE.md`, `docs/decisions.md` и `docs/terminal-api-plan.md` поправлены.
