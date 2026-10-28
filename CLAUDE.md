@@ -1,48 +1,23 @@
 # CLAUDE.md
 
-## Обзор проекта
+Описание проекта, запуск, API и архитектура — в `README.md`. Команды — в `package.json`. Зависимости собираются вручную в `src/main.ts` (фабрики `createX(deps)`).
 
-Pushka — планировщик Web Push уведомлений на Node.js и Express. Принимает push-подписки с временем отправки, сохраняет и отправляет через Web Push Protocol.
+## Стиль ответов
 
-## Команды
-
-```bash
-npm run start            # production-сервер
-npm run dev              # dev-сервер с watch-режимом
-npm run test:env         # unit-тесты загрузки .env
-npm run test:sqliteStore # unit-тесты SQLite-хранилища
-npm run test:integration # интеграционные тесты
-npm run test:playwright  # e2e-тесты (Playwright)
-```
-
-## Архитектура
-
-```
-main.ts → createApp(port, router, scheduler, logger)
-            ├── createRouter(scheduler, pusher, logger)
-            │     ├── createNotificationRouter
-            │     └── createVapidKeyRouter
-            ├── createNotificationScheduler(store, pusher, logger)
-            ├── createSqliteStore(filename)
-            ├── createWebPusher(vapidConfig, logger)
-            └── createConsoleLogger()
-```
-
-Поток данных: Клиент → Router → Scheduler.schedule() → Store → (по таймеру) → Pusher → Push Service
+- Отвечай кратко и по делу, на русском.
+- Без вступлений, похвалы и пересказа диффа.
+- В ревью: только конкретные замечания, одна строка на пункт.
 
 ## Стиль кода
 
 - **Без классов:** фабричные функции `createX(deps)`, замыкания, именованные экспорты
 - **ESM-импорты:** только относительные с расширением `.ts`; сначала библиотеки, затем проект
 - **Только async:** `node:fs/promises`, никаких синхронных методов
+- Pre-commit хук гоняет `lint` и `format:check` — перед коммитом код должен проходить оба
 
 ## Тестирование
 
 `node:test` + `node:assert/strict`. Утилиты в `tests/tools.ts`: `createTestApp()` для e2e, `createFakeNotification()` для unit.
-
-## Окружение
-
-Node.js >= 24.0 (нужен встроенный `node:sqlite`). При первом запуске `.env` создаётся автоматически с новыми VAPID-ключами. Для кастомных значений (`VAPID_SUBJECT`, `PORT`) — отредактировать `.env` после первого запуска.
 
 ## Продакшн-сервер
 
@@ -57,12 +32,8 @@ Node.js >= 24.0 (нужен встроенный `node:sqlite`). При перв
 
 ## CI/CD
 
-- **`.github/workflows/ci.yml`** — на каждый `push`/`pull_request`: job `test` (typecheck + unit +
-  integration + `npm audit`) и job `e2e` (Playwright, реальный FCM). Никак не связан с деплоем.
-- **`.github/workflows/deploy.yml`** — только ручной `workflow_dispatch` (Actions → Deploy → Run
-  workflow). **Не проверяет статус CI** и сам тесты не гоняет — перед запуском нужно вручную
-  убедиться, что `ci.yml` зелёный на нужном коммите. Собирает `npm ci --omit=dev`, заливает
-  `src/`/`node_modules/`/`package*.json` по SSH в `/srv/pushka/releases/<sha>`,
-  переключает симлинк `current`, перезапускает systemd-сервис.
-- **`.github/dependabot.yml`** — еженедельные PR на обновления npm-зависимостей и GitHub Actions.
-- Детали инфраструктуры (пользователь на сервере, nginx, TLS, откат) — `deploy/README.md`.
+- **`ci.yml`** — на каждый `push`/`pull_request`: `test` (typecheck + unit + integration +
+  `npm audit`) и `e2e` (Playwright, реальный FCM). С деплоем не связан.
+- **`deploy.yml`** — только ручной `workflow_dispatch`. **Не проверяет статус CI** и тесты не
+  гоняет — перед запуском вручную убедиться, что `ci.yml` зелёный на нужном коммите.
+- Детали инфраструктуры (сервер, nginx, TLS, откат) — `deploy/README.md`.
